@@ -3,7 +3,7 @@
 A visually stunning and interactive web application for exploring the rich history of nations around the globe. This project uses pure HTML, CSS, and JavaScript to create a dynamic and engaging user experience, allowing users to discover historical facts, timelines, and key data for various countries directly on a world map.
 
 live:-https://susmi-cse.github.io/interactive-historical-map/ 
-*Note: Replace the above URL with a real screenshot of your project.*
+*.*
 
 ---
 
