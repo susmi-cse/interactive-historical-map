@@ -1,0 +1,1307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>World Historical Map Explorer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f1419 0%, #1a1f36 50%, #0f1419 100%);
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 100vw;
+            margin: 0 auto;
+            padding: 15px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 300px;
+            height: 200px;
+            background: radial-gradient(ellipse, rgba(64, 224, 208, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            z-index: -1;
+        }
+
+        h1 {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #40e0d0, #48d1cc, #00ced1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(64, 224, 208, 0.3);
+        }
+
+        .subtitle {
+            font-size: clamp(1rem, 2.5vw, 1.3rem);
+            color: #5f9ea0;
+            margin-bottom: 15px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .time-period-btn {
+            background: rgba(64, 224, 208, 0.1);
+            border: 1px solid rgba(64, 224, 208, 0.3);
+            color: #40e0d0;
+            padding: 8px 16px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .time-period-btn:hover,
+        .time-period-btn.active {
+            background: rgba(64, 224, 208, 0.2);
+            border-color: #40e0d0;
+            box-shadow: 0 4px 15px rgba(64, 224, 208, 0.2);
+        }
+
+        .search-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(64, 224, 208, 0.3);
+            border-radius: 25px;
+            padding: 10px 20px;
+            color: #fff;
+            font-size: 1rem;
+            width: 300px;
+            max-width: 90vw;
+        }
+
+        .search-input::placeholder {
+            color: #5f9ea0;
+        }
+
+        .map-container {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 20px;
+            align-items: start;
+        }
+
+        .map-section {
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(20px);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(64, 224, 208, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        #world-map {
+            width: 100%;
+            height: auto;
+            min-height: 400px;
+            border-radius: 10px;
+            filter: drop-shadow(0 4px 20px rgba(0, 0, 0, 0.3));
+        }
+
+        .country {
+            fill: #2c3e50;
+            stroke: #34495e;
+            stroke-width: 0.5;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .country:hover {
+            fill: #3498db;
+            stroke: #2980b9;
+            stroke-width: 1.5;
+            filter: drop-shadow(0 0 10px rgba(52, 152, 219, 0.5));
+        }
+
+        .country.active {
+            fill: #e74c3c;
+            stroke: #c0392b;
+            stroke-width: 2;
+            filter: drop-shadow(0 0 15px rgba(231, 76, 60, 0.6));
+        }
+
+        .info-panel {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%);
+            backdrop-filter: blur(25px);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(64, 224, 208, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            position: sticky;
+            top: 20px;
+            max-height: 80vh;
+            overflow-y: auto;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .info-content {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .info-content.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .country-flag {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .country-name {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #40e0d0, #48d1cc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .country-capital {
+            font-size: 1.1rem;
+            color: #5f9ea0;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+
+        .info-section {
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            color: #40e0d0;
+            margin-bottom: 10px;
+            border-bottom: 1px solid rgba(64, 224, 208, 0.3);
+            padding-bottom: 5px;
+        }
+
+        .historical-periods {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .period-tag {
+            background: rgba(64, 224, 208, 0.1);
+            border: 1px solid rgba(64, 224, 208, 0.3);
+            color: #40e0d0;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .period-tag:hover,
+        .period-tag.active {
+            background: rgba(64, 224, 208, 0.2);
+            border-color: #40e0d0;
+        }
+
+        .description {
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin-bottom: 15px;
+            color: #e8e8e8;
+        }
+
+        .facts-list {
+            list-style: none;
+            margin-bottom: 15px;
+        }
+
+        .facts-list li {
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(64, 224, 208, 0.1);
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        .facts-list li:before {
+            content: '🔹';
+            margin-right: 8px;
+            color: #40e0d0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .stat-item {
+            background: rgba(64, 224, 208, 0.05);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(64, 224, 208, 0.1);
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: #5f9ea0;
+            margin-bottom: 2px;
+        }
+
+        .stat-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #40e0d0;
+        }
+
+        .default-message {
+            text-align: center;
+            font-size: 1.2rem;
+            color: #5f9ea0;
+            font-style: italic;
+            padding: 40px 0;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #40e0d0;
+        }
+
+        .spinner {
+            width: 30px;
+            height: 30px;
+            border: 3px solid rgba(64, 224, 208, 0.3);
+            border-top: 3px solid #40e0d0;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes float-particle {
+            0% {
+                transform: translateY(0) translateX(0) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.8;
+            }
+            90% {
+                opacity: 0.3;
+            }
+            100% {
+                transform: translateY(-100vh) translateX(100px) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+
+        @media (max-width: 1024px) {
+            .map-container {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .info-panel {
+                position: relative;
+                top: 0;
+                max-height: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .map-section,
+            .info-panel {
+                padding: 15px;
+            }
+            
+            .controls {
+                gap: 8px;
+            }
+            
+            .time-period-btn {
+                padding: 6px 12px;
+                font-size: 0.8rem;
+            }
+        }
+
+        .info-panel::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .info-panel::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        .info-panel::-webkit-scrollbar-thumb {
+            background: rgba(64, 224, 208, 0.3);
+            border-radius: 3px;
+        }
+
+        .info-panel::-webkit-scrollbar-thumb:hover {
+            background: rgba(64, 224, 208, 0.5);
+        }
+        /* ================== */
+/* FOOTER STYLES    */
+/* ================== */
+
+.site-footer {
+  background-color: #2c3e50;  /* A dark blue-gray background */
+  color: #ecf0f1;            /* A light, soft white text color */
+  text-align: center;         /* Centers the text inside the footer */
+  padding: 20px 0;            /* Adds 20px of space on top/bottom, 0 on left/right */
+  font-family: sans-serif;    /* A clean, modern font */
+  font-size: 0.9em;           /* Makes the font slightly smaller than the body text */
+  
+  /* This part ensures the footer is at the bottom of the content */
+  /* If the page content is short, it won't float in the middle */
+  width: 100%;
+}
+
+.site-footer p {
+  margin: 0; /* Removes the default margin from the paragraph tag */
+}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>World Historical Explorer</h1>
+            <p class="subtitle">Discover the rich history of every nation on Earth</p>
+        </header>
+
+        <div class="controls">
+            <button class="time-period-btn active" data-period="all">All Periods</button>
+            <button class="time-period-btn" data-period="ancient">Ancient (3000 BCE - 500 CE)</button>
+            <button class="time-period-btn" data-period="medieval">Medieval (500 - 1500 CE)</button>
+            <button class="time-period-btn" data-period="modern">Modern (1500 - 1900 CE)</button>
+            <button class="time-period-btn" data-period="contemporary">Contemporary (1900 - Present)</button>
+        </div>
+
+        <div class="search-container">
+            <input type="text" class="search-input" placeholder="Search for a country or region..." id="country-search">
+        </div>
+
+        <div class="map-container">
+            <div class="map-section">
+                <svg id="world-map" viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg">
+                    <!-- North America -->
+                    <path id="usa" class="country" d="M100 150 L280 140 L300 180 L290 220 L250 240 L150 250 L120 200 Z"/>
+                    <path id="canada" class="country" d="M80 80 L320 70 L330 130 L280 140 L100 150 L90 120 Z"/>
+                    <path id="mexico" class="country" d="M150 250 L250 240 L260 280 L180 290 Z"/>
+                    
+                    <!-- South America -->
+                    <path id="brazil" class="country" d="M250 290 L340 285 L360 350 L330 380 L280 360 L260 320 Z"/>
+                    <path id="argentina" class="country" d="M280 360 L320 355 L325 420 L290 430 L285 380 Z"/>
+                    <path id="chile" class="country" d="M270 370 L285 380 L290 430 L275 435 Z"/>
+                    <path id="peru" class="country" d="M240 320 L280 315 L285 350 L250 355 Z"/>
+                    
+                    <!-- Europe -->
+                    <path id="russia" class="country" d="M480 80 L680 70 L700 160 L650 180 L500 150 Z"/>
+                    <path id="germany" class="country" d="M460 170 L490 165 L495 190 L470 195 Z"/>
+                    <path id="france" class="country" d="M440 180 L470 175 L465 200 L445 205 Z"/>
+                    <path id="uk" class="country" d="M420 160 L450 155 L445 180 L425 185 Z"/>
+                    <path id="spain" class="country" d="M425 205 L460 200 L455 225 L430 230 Z"/>
+                    <path id="italy" class="country" d="M470 200 L485 195 L480 230 L475 235 Z"/>
+                    <path id="norway" class="country" d="M460 120 L480 115 L485 150 L465 155 Z"/>
+                    <path id="sweden" class="country" d="M480 125 L500 120 L505 155 L485 160 Z"/>
+                    
+                    <!-- Africa -->
+                    <path id="egypt" class="country" d="M520 220 L550 215 L555 245 L530 250 Z"/>
+                    <path id="libya" class="country" d="M490 225 L530 220 L535 250 L495 255 Z"/>
+                    <path id="nigeria" class="country" d="M450 270 L480 265 L485 290 L455 295 Z"/>
+                    <path id="south_africa" class="country" d="M500 350 L540 345 L545 380 L510 385 Z"/>
+                    <path id="kenya" class="country" d="M540 290 L560 285 L565 315 L545 320 Z"/>
+                    <path id="ethiopia" class="country" d="M540 265 L565 260 L570 285 L545 290 Z"/>
+                    <path id="morocco" class="country" d="M420 240 L450 235 L455 260 L425 265 Z"/>
+                    
+                    <!-- Asia -->
+                    <path id="china" class="country" d="M680 170 L780 160 L790 220 L720 230 L690 200 Z"/>
+                    <path id="india" class="country" d="M650 220 L720 210 L730 270 L680 280 L660 250 Z"/>
+                    <path id="japan" class="country" d="M820 180 L850 175 L855 210 L825 215 Z"/>
+                    <path id="australia" class="country" d="M750 350 L850 340 L860 390 L780 400 Z"/>
+                    <path id="indonesia" class="country" d="M720 310 L800 305 L810 330 L730 335 Z"/>
+                    <path id="saudi_arabia" class="country" d="M560 240 L600 235 L605 270 L570 275 Z"/>
+                    <path id="iran" class="country" d="M600 200 L640 195 L645 230 L610 235 Z"/>
+                    <path id="turkey" class="country" d="M520 180 L560 175 L565 200 L530 205 Z"/>
+                    <path id="mongolia" class="country" d="M680 140 L750 135 L755 170 L690 175 Z"/>
+                    <path id="kazakhstan" class="country" d="M600 140 L680 135 L690 170 L620 175 Z"/>
+                    
+                    <!-- Country Labels -->
+                    <text x="190" y="195" fill="#40e0d0" font-size="10" text-anchor="middle">USA</text>
+                    <text x="205" y="115" fill="#40e0d0" font-size="10" text-anchor="middle">Canada</text>
+                    <text x="215" y="270" fill="#40e0d0" font-size="10" text-anchor="middle">Mexico</text>
+                    <text x="305" y="325" fill="#40e0d0" font-size="10" text-anchor="middle">Brazil</text>
+                    <text x="735" y="195" fill="#40e0d0" font-size="10" text-anchor="middle">China</text>
+                    <text x="690" y="245" fill="#40e0d0" font-size="10" text-anchor="middle">India</text>
+                    <text x="590" y="125" fill="#40e0d0" font-size="10" text-anchor="middle">Russia</text>
+                    <text x="805" y="370" fill="#40e0d0" font-size="10" text-anchor="middle">Australia</text>
+                </svg>
+            </div>
+
+            <div class="info-panel">
+                <div class="info-content">
+                    <div class="default-message">
+                        🌍 Click on any country to explore its fascinating history
+                        <br><br>
+                        Use the search box or time period filters to find specific information
+                    </div>
+                </div>
+            </div>
+            <footer class="site-footer">
+        <p>&copy; Susmita 2025. All Rights Reserved.</p>
+    </footer>
+        </div>
+    </div>
+
+    <script>
+        // Complete historical data for countries
+        const countryData = {
+            usa: {
+                name: "United States of America",
+                capital: "Washington, D.C.",
+                flag: "🇺🇸",
+                area: "9.8 million km²",
+                population: "331 million",
+                founded: "1776",
+                periods: ["modern", "contemporary"],
+                description: "A federal republic born from 13 British colonies, the USA became a global superpower through rapid expansion, industrialization, and democratic ideals.",
+                history: {
+                    ancient: "Indigenous peoples including Cherokee, Iroquois, and Pueblo nations inhabited the continent for thousands of years.",
+                    medieval: "Viking expeditions (1000 CE) and later European exploration began contact with indigenous civilizations.",
+                    modern: "Colonial period (1607-1776), American Revolution, westward expansion, and Civil War (1861-1865).",
+                    contemporary: "Industrial revolution, two World Wars, Cold War leadership, technological advancement, and global influence."
+                },
+                facts: [
+                    "Founded by declaring independence from Britain in 1776",
+                    "Constitution written in 1787, still the supreme law",
+                    "Civil War (1861-1865) ended slavery and preserved the Union",
+                    "First to land humans on the moon (1969)",
+                    "Largest economy in the world",
+                    "Hollywood became the global entertainment capital",
+                    "Silicon Valley revolutionized technology and computing",
+                    "50 states united under federal government"
+                ]
+            },
+            china: {
+                name: "People's Republic of China",
+                capital: "Beijing",
+                flag: "🇨🇳",
+                area: "9.6 million km²",
+                population: "1.4 billion",
+                founded: "1949 (Modern) / 2070 BCE (Ancient)",
+                periods: ["ancient", "medieval", "modern", "contemporary"],
+                description: "The world's oldest continuous civilization, China has over 4,000 years of recorded history and is now the world's most populous country.",
+                history: {
+                    ancient: "Xia Dynasty (2070 BCE), invention of writing, philosophy (Confucius, Laozi), Great Wall construction began.",
+                    medieval: "Tang and Song dynasties, golden age of poetry and technology, invention of gunpowder, compass, and printing.",
+                    modern: "Ming and Qing dynasties, European contact, Opium Wars, fall of imperial system (1912).",
+                    contemporary: "Communist revolution (1949), Cultural Revolution, economic reforms (1978), rapid modernization and global influence."
+                },
+                facts: [
+                    "Oldest continuous civilization spanning over 4,000 years",
+                    "Invented paper, gunpowder, compass, and printing press",
+                    "Great Wall stretches over 13,000 miles",
+                    "Terracotta Army guards Emperor Qin's tomb",
+                    "Silk Road connected East and West for centuries",
+                    "Most populous country with 1.4 billion people",
+                    "Second largest economy in the world",
+                    "Home to Confucianism, Taoism, and Buddhism"
+                ]
+            },
+            india: {
+                name: "Republic of India",
+                capital: "New Delhi",
+                flag: "🇮🇳",
+                area: "3.3 million km²",
+                population: "1.38 billion",
+                founded: "1947 (Independence)",
+                periods: ["ancient", "medieval", "modern", "contemporary"],
+                description: "The birthplace of four world religions and home to one of the world's oldest civilizations, India is known for its cultural diversity and spiritual heritage.",
+                history: {
+                    ancient: "Indus Valley Civilization (3300-1300 BCE), Vedic period, Buddhism and Jainism founded, Mauryan Empire.",
+                    medieval: "Gupta Golden Age, Islamic invasions, Delhi Sultanate, Mughal Empire with architectural marvels like Taj Mahal.",
+                    modern: "British colonial rule (1858-1947), independence movement led by Gandhi, partition creating Pakistan.",
+                    contemporary: "Non-aligned movement, Green Revolution, IT revolution, nuclear power, rapid economic growth."
+                },
+                facts: [
+                    "Birthplace of Hinduism, Buddhism, Jainism, and Sikhism",
+                    "Indus Valley was one of world's first urban civilizations",
+                    "Invented zero, decimal system, and chess",
+                    "Taj Mahal is a UNESCO World Heritage Site",
+                    "Gandhi led non-violent independence movement",
+                    "World's largest democracy",
+                    "IT services hub for the global economy",
+                    "Over 700 languages spoken across the country"
+                ]
+            },
+            russia: {
+                name: "Russian Federation",
+                capital: "Moscow",
+                flag: "🇷🇺",
+                area: "17.1 million km²",
+                population: "146 million",
+                founded: "862 CE (Kievan Rus) / 1991 (Federation)",
+                periods: ["medieval", "modern", "contemporary"],
+                description: "The world's largest country by land area, Russia spans eleven time zones and has played a major role in world history as an empire and superpower.",
+                history: {
+                    ancient: "Slavic tribes, Scythian cultures in the Black Sea region.",
+                    medieval: "Kievan Rus (862-1240), Mongol invasion, rise of Moscow, Ivan the Terrible's reign.",
+                    modern: "Romanov dynasty, expansion across Siberia, Napoleonic Wars, abolition of serfdom, Russian Revolution (1917).",
+                    contemporary: "Soviet Union (1922-1991), World War II victory, Cold War, space race, dissolution and modern federation."
+                },
+                facts: [
+                    "Largest country in the world covering 11 time zones",
+                    "Romanov dynasty ruled for over 300 years",
+                    "First country to send human to space (Yuri Gagarin, 1961)",
+                    "Trans-Siberian Railway is world's longest",
+                    "Survived Napoleon's invasion and defeated Nazi Germany",
+                    "Rich literary tradition: Tolstoy, Dostoevsky, Pushkin",
+                    "Hermitage Museum houses 3 million works of art",
+                    "Vodka and caviar are traditional Russian exports"
+                ]
+            },
+            brazil: {
+                name: "Federative Republic of Brazil",
+                capital: "Brasília",
+                flag: "🇧🇷",
+                area: "8.5 million km²",
+                population: "215 million",
+                founded: "1822 (Independence)",
+                periods: ["modern", "contemporary"],
+                description: "The largest country in South America, Brazil is known for the Amazon rainforest, vibrant culture, and being the only Portuguese-speaking nation in the Americas.",
+                history: {
+                    ancient: "Indigenous peoples including Tupi, Guaraní, and many others lived throughout the territory.",
+                    medieval: "Portuguese exploration began in 1500, colonial period with sugar plantations and slavery.",
+                    modern: "Independence from Portugal (1822), Empire of Brazil, abolition of slavery (1888), Republic established (1889).",
+                    contemporary: "Industrialization, military dictatorship (1964-1985), return to democracy, economic growth and global influence."
+                },
+                facts: [
+                    "Home to 60% of the Amazon rainforest",
+                    "Only Portuguese-speaking country in South America",
+                    "Carnival in Rio is world's largest festival",
+                    "Coffee production made it wealthy in 19th century",
+                    "Last country in Americas to abolish slavery (1888)",
+                    "Brasília was purpose-built capital city (1960)",
+                    "Football (soccer) is the national passion",
+                    "Most biodiverse country in the world"
+                ]
+            },
+            uk: {
+                name: "United Kingdom",
+                capital: "London",
+                flag: "🇬🇧",
+                area: "243,000 km²",
+                population: "67 million",
+                founded: "1707 (Union of Kingdoms)",
+                periods: ["ancient", "medieval", "modern", "contemporary"],
+                description: "An island nation that became a global empire, the UK was the birthplace of the Industrial Revolution and parliamentary democracy.",
+                history: {
+                    ancient: "Celtic tribes, Roman occupation (43-410 CE), Anglo-Saxon kingdoms.",
+                    medieval: "Norman Conquest (1066), Magna Carta (1215), Hundred Years' War, Wars of the Roses.",
+                    modern: "English Civil War, Act of Union (1707), Industrial Revolution, British Empire expansion.",
+                    contemporary: "Two World Wars, decolonization, welfare state, Brexit (2020)."
+                },
+                facts: [
+                    "Birthplace of the Industrial Revolution",
+                    "British Empire was the largest in history",
+                    "Parliamentary system influenced democracies worldwide",
+                    "Shakespeare wrote in the English Renaissance",
+                    "London was world's largest city in 19th century",
+                    "Invented the steam engine and railway",
+                    "The Beatles revolutionized popular music",
+                    "Consists of England, Scotland, Wales, and Northern Ireland"
+                ]
+            },
+            egypt: {
+                name: "Arab Republic of Egypt",
+                capital: "Cairo",
+                flag: "🇪🇬",
+                area: "1 million km²",
+                population: "104 million",
+                founded: "3100 BCE (Ancient) / 1953 (Republic)",
+                periods: ["ancient", "medieval", "modern", "contemporary"],
+                description: "Home to one of the world's oldest civilizations, Egypt is famous for the pyramids, pharaohs, and the Nile River.",
+                history: {
+                    ancient: "Pharaonic civilization (3100-30 BCE), pyramids built, hieroglyphic writing, Cleopatra's reign.",
+                    medieval: "Islamic conquest (641 CE), Fatimid and Ayyubid dynasties, Mamluk period.",
+                    modern: "Ottoman rule, Napoleon's expedition, British protectorate, independence (1922).",
+                    contemporary: "Nasser's revolution (1952), Suez Crisis, wars with Israel, Sadat's peace treaty, modern Egypt."
+                },
+                facts: [
+                    "Great Pyramid of Giza is last surviving Wonder of Ancient World",
+                    "Hieroglyphics were deciphered using Rosetta Stone",
+                    "Pharaohs ruled for over 3,000 years",
+                    "Suez Canal connects Mediterranean and Red Seas",
+                    "Nile River is the longest river in the world",
+                    "Ancient Egyptians invented paper, calendar, and medicine",
+                    "Cairo is the largest city in the Arab world",
+                    "Mummification preserved bodies for thousands of years"
+                ]
+            },
+            japan: {
+                name: "Japan",
+                capital: "Tokyo",
+                flag: "🇯🇵",
+                area: "378,000 km²",
+                population: "125 million",
+                founded: "660 BCE (Traditional)",
+                periods: ["ancient", "medieval", "modern", "contemporary"],
+                description: "An island nation known for preserving ancient traditions while leading in modern technology and innovation.",
+                history: {
+                    ancient: "Jomon period (14,000-300 BCE), Yayoi period, Yamato state formation, Buddhism introduction (552 CE).",
+                    medieval: "Heian period, rise of samurai, Kamakura and Muromachi shogunates, isolationist sakoku policy.",
+                    modern: "Meiji Restoration (1868), rapid modernization, wars with China and Russia, World War II.",
+                    contemporary: "Post-war reconstruction, economic miracle, technology leadership, aging society challenges."
+                },
+                facts: [
+                    "Only country to experience atomic bombing in warfare",
+                    "Sakoku isolation policy lasted over 200 years",
+                    "Bullet trains (Shinkansen) pioneered high-speed rail",
+                    "Samurai warrior class dominated medieval period",
+                    "Mount Fuji is sacred symbol and active volcano",
+                    "Anime and manga are major cultural exports",
+                    "World's third-largest economy",
+                    "Cherry blossom (sakura) season is national celebration"
+                ]
+            },
+            germany: {
+                name: "Federal Republic of Germany",
+                capital: "Berlin",
+                flag: "🇩🇪",
+                area: "357,000 km²",
+                population: "83 million",
+                founded: "1871 (Unification) / 1949 (FRG)",
+                periods: ["medieval", "modern", "contemporary"],
+                description: "Located in the heart of Europe, Germany has been a major cultural and economic force, from the Holy Roman Empire to modern EU leadership.",
+                history: {
+                    ancient: "Germanic tribes, Roman frontier, Frankish kingdoms.",
+                    medieval: "Holy Roman Empire, Hanseatic League, Protestant Reformation started by Martin Luther.",
+                    modern: "Prussian dominance, German unification (1871), World War I, Weimar Republic, Nazi period.",
+                    contemporary: "Division after WWII, Cold War symbol, reunification (1990), EU leadership."
+                },
+                facts: [
+                    "Birthplace of the Protestant Reformation (1517)",
+                    "Invented the printing press (Gutenberg, 1440)",
+                    "Berlin Wall symbolized Cold War division",
+                    "Oktoberfest is world's largest beer festival",
+                    "Home to Bach, Beethoven, and Mozart",
+                    "Largest economy in Europe",
+                    "Automotive industry: BMW, Mercedes-Benz, Volkswagen",
+                    "Leading renewable energy adoption"
+                ]
+            },
+            france: {
+                name: "French Republic",
+                capital: "Paris",
+                flag: "🇫🇷",
+                area: "643,000 km²",
+                population: "68 million",
+                founded: "843 CE (Francia) / 1792 (Republic)",
+                periods: ["medieval", "modern", "contemporary"],
+                description: "A cultural powerhouse known for art, cuisine, fashion, and revolutionary ideals that shaped modern democracy.",
+                history: {
+                    ancient: "Celtic Gauls, Roman conquest by Julius Caesar, Frankish kingdoms.",
+                    medieval: "Charlemagne's empire, Capetian dynasty, Hundred Years' War, Joan of Arc.",
+                    modern: "Absolute monarchy, French Revolution (1789), Napoleon's empire, colonial expansion.",
+                    contemporary: "Two World Wars, Resistance during Nazi occupation, Fifth Republic, EU founding member."
+                },
+                facts: [
+                    "French Revolution (1789) spread democratic ideals worldwide",
+                    "Napoleon's empire stretched across Europe",
+                    "Eiffel Tower built for 1889 World's Fair",
+                    "Palace of Versailles epitomized royal luxury",
+                    "French cuisine recognized by UNESCO",
+                    "Fashion capital with haute couture tradition",
+                    "Most visited country in the world",
+                    "Nuclear power provides 70% of electricity"
+                ]
+            },
+            australia: {
+                name: "Commonwealth of Australia",
+                capital: "Canberra",
+                flag: "🇦🇺",
+                area: "7.7 million km²",
+                population: "26 million",
+                founded: "1901 (Federation)",
+                periods: ["modern", "contemporary"],
+                description: "The world's sixth-largest country, Australia is known for unique wildlife, indigenous culture, and natural wonders.",
+                history: {
+                    ancient: "Aboriginal peoples inhabited continent for 65,000+ years, world's oldest continuous culture.",
+                    medieval: "Continued indigenous development, Dreamtime spiritual traditions, complex societies.",
+                    modern: "British colonization (1788), convict settlements, gold rushes, federation of colonies (1901).",
+                    contemporary: "Immigration waves, mining boom, multicultural society, strong US alliance, climate challenges."
+                },
+                facts: [
+                    "Aboriginal culture is world's oldest continuous civilization",
+                    "Originally established as British penal colony (1788)",
+                    "Great Barrier Reef is world's largest coral reef system",
+                    "Uluru (Ayers Rock) is sacred Aboriginal site",
+                    "Unique wildlife: kangaroos, koalas, platypus",
+                    "Sydney Opera House is architectural icon",
+                    "Mining exports drive strong economy",
+                    "Six states federated in 1901"
+                ]
+            },
+            canada: {
+                name: "Canada",
+                capital: "Ottawa",
+                flag: "🇨🇦",
+                area: "9.98 million km²",
+                population: "38 million",
+                founded: "1867 (Confederation)",
+                periods: ["modern", "contemporary"],
+                description: "The world's second-largest country, Canada is known for multiculturalism, natural beauty, and peaceful development.",
+                history: {
+                    ancient: "Indigenous peoples including Inuit, First Nations, and Métis for thousands of years.",
+                    medieval: "Viking expeditions (1000 CE), continued indigenous development.",
+                    modern: "French colonization (New France), British conquest (1760), Confederation (1867).",
+                    contemporary: "Two World Wars participation, quiet revolution, multiculturalism policy, modern prosperity."
+                },
+                facts: [
+                    "Second-largest country by total area",
+                    "French and English are official languages",
+                    "Confederation united four provinces in 1867",
+                    "Canadian Pacific Railway connected coast to coast",
+                    "Peacekeeping tradition in international conflicts",
+                    "Universal healthcare system since 1960s",
+                    "Maple syrup production leads the world",
+                    "Longest coastline of any country"
+                ]
+            },
+            mexico: {
+                name: "United Mexican States",
+                capital: "Mexico City",
+                flag: "🇲🇽",
+                area: "1.96 million km²",
+                population: "130 million",
+                founded: "1821 (Independence)",
+                periods: ["ancient", "medieval", "modern", "contemporary"],
+                description: "Rich in ancient civilizations and colonial heritage, Mexico bridges North and South America with vibrant culture.",
+                history: {
+                    ancient: "Olmec, Maya, and Aztec civilizations, Teotihuacan, advanced astronomy and mathematics.",
+                    medieval: "Spanish conquest by Cortés (1521), colonial period, evangelization, mestizo culture.",
+                    modern: "Independence from Spain (1821), Mexican-American War, French intervention, Revolution (1910).",
+                    contemporary: "PRI dominance, NAFTA agreement, democratization, drug war challenges, economic growth."
+                },
+                facts: [
+                    "Home to advanced Maya and Aztec civilizations",
+                    "Spanish conquest destroyed Aztec empire (1521)",
+                    "Mexican Revolution (1910-1920) was major social upheaval",
+                    "Chichen Itza is UNESCO World Heritage Site",
+                    "Day of the Dead (Día de los Muertos) is unique tradition",
+                    "Largest Spanish-speaking country",
+                    "Cuisine recognized by UNESCO as cultural heritage",
+                    "NAFTA member with US and Canada"
+                ]
+            },
+            italy: {
+                name: "Italian Republic",
+                capital: "Rome",
+                flag: "🇮🇹",
+                area: "301,000 km²",
+                population: "60 million",
+                founded: "1861 (Unification)",
+                periods: ["ancient", "medieval", "modern", "contemporary"],
+                description: "The heart of the Roman Empire and Renaissance, Italy has profoundly influenced Western civilization, art, and culture.",
+                history: {
+                    ancient: "Roman Republic and Empire (753 BCE-476 CE), Latin language, legal system, engineering.",
+                    medieval: "Byzantine influence, papal states, city-states like Venice and Florence, Renaissance birthplace.",
+                    modern: "Unification movement (Risorgimento), Kingdom of Italy, World War alliances.",
+                    contemporary: "Fascist period, World War II, republic establishment, EU founding member, cultural preservation."
+                },
+                facts: [
+                    "Roman Empire's legacy in law, language, and engineering",
+                    "Renaissance began in Italian city-states",
+                    "Vatican City is world's smallest sovereign state",
+                    "Venice was major medieval trading power",
+                    "Leonardo da Vinci epitomized Renaissance genius",
+                    "Most UNESCO World Heritage Sites (58)",
+                    "Fashion and design global leader",
+                    "Pasta and pizza originated here"
+                ]
+            },
+            spain: {
+                name: "Kingdom of Spain",
+                capital: "Madrid",
+                flag: "🇪🇸",
+                area: "505,000 km²",
+                population: "47 million",
+                founded: "1469 (Unification of Crowns)",
+                periods: ["ancient", "medieval", "modern", "contemporary"],
+                description: "Once the heart of a global empire, Spain is known for its rich cultural heritage, art, and historical influence in the Americas.",
+                history: {
+                    ancient: "Iberians, Celts, Roman Hispania, Visigothic kingdom.",
+                    medieval: "Islamic conquest (711), Reconquista, unification of Castile and Aragon (1469).",
+                    modern: "Discovery of Americas (1492), vast colonial empire, Habsburg and Bourbon dynasties.",
+                    contemporary: "Civil War (1936-1939), Franco dictatorship, transition to democracy, EU membership."
+                },
+                facts: [
+                    "Christopher Columbus sailed under Spanish crown (1492)",
+                    "Spanish Empire was first global empire",
+                    "El Cid became legendary medieval hero",
+                    "Conquistadors explored and colonized Americas",
+                    "Flamenco dance originated in Andalusia",
+                    "Sagrada Família has been under construction since 1882",
+                    "Spanish is world's second most spoken language",
+                    "Running of Bulls in Pamplona is famous tradition"
+                ]
+            },
+            // Additional countries
+            argentina: {
+                name: "Argentine Republic",
+                capital: "Buenos Aires",
+                flag: "🇦🇷",
+                area: "2.78 million km²",
+                population: "45 million",
+                founded: "1816 (Independence)",
+                periods: ["modern", "contemporary"],
+                description: "Known for tango, beef, and European immigration, Argentina is South America's second-largest country.",
+                history: {
+                    ancient: "Indigenous peoples including Diaguita and Guaraní inhabited the region.",
+                    medieval: "Spanish exploration and conquest, colonial period with cattle ranching.",
+                    modern: "Independence from Spain (1816), immigration waves, cattle and grain exports.",
+                    contemporary: "Perón era, military dictatorship, return to democracy, economic challenges."
+                },
+                facts: [
+                    "Tango dance originated in Buenos Aires",
+                    "Second-largest country in South America",
+                    "Major beef and wheat exporter",
+                    "European immigration shaped modern culture",
+                    "Eva Perón became iconic first lady",
+                    "Falklands War fought with Britain (1982)",
+                    "Wine production in Mendoza region",
+                    "Patagonia offers stunning natural beauty"
+                ]
+            },
+            chile: {
+                name: "Republic of Chile",
+                capital: "Santiago",
+                flag: "🇨🇱",
+                area: "756,000 km²",
+                population: "19 million",
+                founded: "1818 (Independence)",
+                periods: ["modern", "contemporary"],
+                description: "A long, narrow country between the Andes and Pacific, Chile is known for wine, copper, and diverse geography.",
+                history: {
+                    ancient: "Mapuche people resisted Inca and later Spanish conquest.",
+                    medieval: "Spanish colonization, struggle against indigenous resistance.",
+                    modern: "Independence led by Bernardo O'Higgins (1818), War of the Pacific.",
+                    contemporary: "Salvador Allende presidency, Pinochet dictatorship, return to democracy."
+                },
+                facts: [
+                    "World's longest and narrowest country",
+                    "Leading copper producer globally",
+                    "Atacama Desert is world's driest place",
+                    "Pablo Neruda won Nobel Prize for Literature",
+                    "Easter Island (Rapa Nui) belongs to Chile",
+                    "Major wine exporting nation",
+                    "Strong earthquake zone on Ring of Fire",
+                    "Democratic transition after Pinochet era"
+                ]
+            },
+            norway: {
+                name: "Kingdom of Norway",
+                capital: "Oslo",
+                flag: "🇳🇴",
+                area: "385,000 km²",
+                population: "5.4 million",
+                founded: "872 CE (Kingdom)",
+                periods: ["medieval", "modern", "contemporary"],
+                description: "Known for fjords, Vikings, and oil wealth, Norway consistently ranks among the world's happiest countries.",
+                history: {
+                    ancient: "Germanic tribes, early Norse culture development.",
+                    medieval: "Viking Age (793-1066), exploration and raids, Christianization, union with Denmark.",
+                    modern: "Independence from Denmark (1814), union with Sweden, industrialization.",
+                    contemporary: "Independence from Sweden (1905), North Sea oil discovery, EU rejection, welfare state."
+                },
+                facts: [
+                    "Vikings originated from this region",
+                    "Discovered North Sea oil in 1960s",
+                    "Consistently ranked happiest country",
+                    "Fjords are UNESCO World Heritage sites",
+                    "Midnight sun in Arctic summer",
+                    "Nobel Peace Prize awarded in Oslo",
+                    "Sovereign wealth fund from oil revenues",
+                    "Strong environmental protection policies"
+                ]
+            },
+            sweden: {
+                name: "Kingdom of Sweden",
+                capital: "Stockholm",
+                flag: "🇸🇪",
+                area: "450,000 km²",
+                population: "10.4 million",
+                founded: "970 CE (Kingdom)",
+                periods: ["medieval", "modern", "contemporary"],
+                description: "Known for innovation, neutrality, and social welfare, Sweden has influenced global culture through music and design.",
+                history: {
+                    ancient: "Germanic tribes, early Scandinavian culture.",
+                    medieval: "Viking expeditions, Christianization, Kalmar Union with Denmark and Norway.",
+                    modern: "Great Power era, empire in Baltic, industrialization, neutrality policy.",
+                    contemporary: "Welfare state model, EU membership, technological innovation, cultural exports."
+                },
+                facts: [
+                    "ABBA made Sweden a musical superpower",
+                    "IKEA revolutionized furniture design",
+                    "Neutral in both World Wars",
+                    "Nobel Prizes awarded in Stockholm",
+                    "Cradle-to-grave welfare system",
+                    "Volvo and Saab automotive brands",
+                    "Midnight sun and Northern Lights",
+                    "High gender equality rankings"
+                ]
+            }
+        };
+
+        // DOM elements
+        const countries = document.querySelectorAll('.country');
+        const infoPanel = document.querySelector('.info-panel');
+        const infoContent = document.querySelector('.info-content');
+        const searchInput = document.getElementById('country-search');
+        const periodBtns = document.querySelectorAll('.time-period-btn');
+
+        // Current state
+        let activeCountry = null;
+        let activePeriod = 'all';
+
+        // Initialize event listeners
+        function initializeApp() {
+            countries.forEach(country => {
+                country.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    selectCountry(country.id);
+                });
+                
+                country.addEventListener('mouseenter', () => {
+                    if (country.id !== activeCountry) {
+                        country.style.fill = '#3498db';
+                        country.style.filter = 'drop-shadow(0 0 10px rgba(52, 152, 219, 0.5))';
+                    }
+                });
+                
+                country.addEventListener('mouseleave', () => {
+                    if (country.id !== activeCountry) {
+                        country.style.fill = '#2c3e50';
+                        country.style.filter = 'none';
+                    }
+                });
+            });
+
+            // Search functionality
+            searchInput.addEventListener('input', handleSearch);
+            
+            // Period filter buttons
+            periodBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    periodBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    activePeriod = btn.dataset.period;
+                    if (activeCountry) {
+                        updateInfoPanel(activeCountry);
+                    }
+                });
+            });
+
+            // Keyboard navigation
+            document.addEventListener('keydown', handleKeyboard);
+        }
+
+        function selectCountry(countryId) {
+            // Remove active class from all countries
+            countries.forEach(c => {
+                c.classList.remove('active');
+                c.style.fill = '#2c3e50';
+                c.style.filter = 'none';
+            });
+            
+            // Add active class to selected country
+            const selectedCountry = document.getElementById(countryId);
+            if (selectedCountry) {
+                selectedCountry.classList.add('active');
+                selectedCountry.style.fill = '#e74c3c';
+                selectedCountry.style.filter = 'drop-shadow(0 0 15px rgba(231, 76, 60, 0.6))';
+                activeCountry = countryId;
+                updateInfoPanel(countryId);
+            }
+        }
+
+        function updateInfoPanel(countryId) {
+            const data = countryData[countryId];
+            if (!data) return;
+
+            // Show loading
+            infoContent.innerHTML = '<div class="loading"><div class="spinner"></div>Loading country data...</div>';
+            infoContent.classList.remove('show');
+            
+            setTimeout(() => {
+                // Get relevant historical content based on active period
+                let historyContent = '';
+                if (activePeriod === 'all') {
+                    historyContent = Object.values(data.history).join(' ');
+                } else {
+                    historyContent = data.history[activePeriod] || 'No significant events recorded for this period.';
+                }
+
+                // Filter facts if period-specific logic needed (simplified here)
+                const relevantFacts = data.facts;
+
+                // Create period tags
+                const periodTags = data.periods.map(period => 
+                    `<span class="period-tag ${period === activePeriod ? 'active' : ''}" onclick="filterByPeriod('${period}')">${capitalizeFirst(period)}</span>`
+                ).join('');
+
+                infoContent.innerHTML = `
+                    <div class="country-flag">${data.flag}</div>
+                    <div class="country-name">${data.name}</div>
+                    <div class="country-capital">Capital: ${data.capital}</div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">Area</div>
+                            <div class="stat-value">${data.area}</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Population</div>
+                            <div class="stat-value">${data.population}</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Founded</div>
+                            <div class="stat-value">${data.founded}</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Periods</div>
+                            <div class="stat-value">${data.periods.length}</div>
+                        </div>
+                    </div>
+
+                    <div class="info-section">
+                        <div class="section-title">Historical Periods</div>
+                        <div class="historical-periods">${periodTags}</div>
+                    </div>
+
+                    <div class="info-section">
+                        <div class="section-title">${activePeriod === 'all' ? 'Complete History' : capitalizeFirst(activePeriod) + ' Period'}</div>
+                        <div class="description">${activePeriod === 'all' ? data.description : historyContent}</div>
+                    </div>
+
+                    <div class="info-section">
+                        <div class="section-title">Key Historical Facts</div>
+                        <ul class="facts-list">
+                            ${relevantFacts.map(fact => `<li>${fact}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+
+                infoContent.classList.add('show');
+            }, 300);
+        }
+
+        function handleSearch(e) {
+            const query = e.target.value.toLowerCase();
+            if (query.length < 2) return;
+
+            // Find matching countries
+            const matches = Object.keys(countryData).filter(id => 
+                countryData[id].name.toLowerCase().includes(query) ||
+                countryData[id].capital.toLowerCase().includes(query) ||
+                id.toLowerCase().includes(query)
+            );
+
+            if (matches.length > 0) {
+                selectCountry(matches[0]);
+                // Highlight the country on map
+                const countryElement = document.getElementById(matches[0]);
+                if (countryElement) {
+                    countryElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        }
+
+        function filterByPeriod(period) {
+            periodBtns.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.period === period);
+            });
+            activePeriod = period;
+            if (activeCountry) {
+                updateInfoPanel(activeCountry);
+            }
+        }
+
+        function handleKeyboard(e) {
+            if (!activeCountry) return;
+            
+            const countryIds = Object.keys(countryData);
+            const currentIndex = countryIds.indexOf(activeCountry);
+            
+            switch(e.key) {
+                case 'ArrowRight':
+                case 'ArrowDown':
+                    if (currentIndex < countryIds.length - 1) {
+                        selectCountry(countryIds[currentIndex + 1]);
+                    }
+                    break;
+                case 'ArrowLeft':
+                case 'ArrowUp':
+                    if (currentIndex > 0) {
+                        selectCountry(countryIds[currentIndex - 1]);
+                    }
+                    break;
+                case 'Escape':
+                    // Deselect current country
+                    countries.forEach(c => {
+                        c.classList.remove('active');
+                        c.style.fill = '#2c3e50';
+                        c.style.filter = 'none';
+                    });
+                    activeCountry = null;
+                    infoContent.innerHTML = `
+                        <div class="default-message">
+                            🌍 Click on any country to explore its fascinating history
+                            <br><br>
+                            Use the search box or time period filters to find specific information
+                        </div>
+                    `;
+                    infoContent.classList.add('show');
+                    break;
+            }
+        }
+
+        function capitalizeFirst(str) {
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+
+        // Add floating particles animation
+        function createParticle() {
+            const particle = document.createElement('div');
+            particle.style.cssText = `
+                position: fixed;
+                width: ${2 + Math.random() * 4}px;
+                height: ${2 + Math.random() * 4}px;
+                background: linear-gradient(45deg, #40e0d0, #48d1cc);
+                border-radius: 50%;
+                pointer-events: none;
+                z-index: 1000;
+                left: ${Math.random() * window.innerWidth}px;
+                top: ${window.innerHeight + 10}px;
+                animation: float-particle ${8 + Math.random() * 4}s linear forwards;
+            `;
+            
+            document.body.appendChild(particle);
+            setTimeout(() => particle.remove(), 12000);
+        }
+
+        // Initialize the application
+        initializeApp();
+
+        // Start particle effects
+        setInterval(createParticle, 2000);
+
+        // Add random country suggestion
+        function suggestRandomCountry() {
+            const countryIds = Object.keys(countryData);
+            const randomId = countryIds[Math.floor(Math.random() * countryIds.length)];
+            
+            // Create suggestion tooltip
+            const suggestion = document.createElement('div');
+            suggestion.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: rgba(64, 224, 208, 0.1);
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(64, 224, 208, 0.3);
+                border-radius: 15px;
+                padding: 15px;
+                color: #40e0d0;
+                cursor: pointer;
+                z-index: 1001;
+                animation: slideIn 0.5s ease;
+                max-width: 250px;
+            `;
+            
+            suggestion.innerHTML = `
+                <div style="font-weight: bold; margin-bottom: 5px;">💡 Explore:</div>
+                <div>${countryData[randomId].name}</div>
+                <div style="font-size: 0.8em; margin-top: 5px; opacity: 0.7;">Click to discover its history</div>
+            `;
+            
+            suggestion.addEventListener('click', () => {
+                selectCountry(randomId);
+                suggestion.remove();
+            });
+            
+            document.body.appendChild(suggestion);
+            
+            setTimeout(() => {
+                if (suggestion.parentNode) {
+                    suggestion.style.animation = 'slideOut 0.5s ease';
+                    setTimeout(() => suggestion.remove(), 500);
+                }
+            }, 8000);
+        }
+
+        // Show random suggestions periodically
+        setTimeout(() => {
+            suggestRandomCountry();
+            setInterval(suggestRandomCountry, 30000);
+        }, 5000);
+
+        // Initialize with show class for default message
+        infoContent.classList.add('show');
+    </script>
+</body>
+</html>
